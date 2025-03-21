@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра: Посадка ракеты</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #111;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #000;
+        }
+        .controls {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            color: white;
+        }
+        .slider {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <p>Управление:</p>
+        <p>W - вверх, A - влево, S - вниз, D - вправо</p>
+        <p>Тяга: <input type="range" class="slider" id="throttle" min="0" max="100" value="50"></p>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let rocket = {
+            x: canvas.width / 2,
+            y: canvas.height / 5,
+            width: 50,
+            height: 100,
+            velocityX: 0,
+            velocityY: 0,
+            thrust: 0,
+            angle: 0,
+            fuel: 100
+        };
+
+        let level = 1;
+        let gravity = 0.1;
+        let throttleInput = document.getElementById('throttle');
+
+        document.addEventListener("keydown", keyDownHandler);
+        document.addEventListener("keyup", keyUpHandler);
+
+        let keys = { W: false, A: false, S: false, D: false };
+
+        function keyDownHandler(e) {
+            if (e.key === "w" || e.key === "W") keys.W = true;
+            if (e.key === "a" || e.key === "A") keys.A = true;
+            if (e.key === "s" || e.key === "S") keys.S = true;
+            if (e.key === "d" || e.key === "D") keys.D = true;
+        }
+
+        function keyUpHandler(e) {
+            if (e.key === "w" || e.key === "W") keys.W = false;
+            if (e.key === "a" || e.key === "A") keys.A = false;
+            if (e.key === "s" || e.key === "S") keys.S = false;
+            if (e.key === "d" || e.key === "D") keys.D = false;
+        }
+
+        function updateRocket() {
+            if (keys.W && rocket.fuel > 0) {
+                rocket.velocityY -= 0.2 * rocket.thrust / 100;
+                rocket.fuel -= 0.1;
+            }
+            if (keys.S && rocket.fuel > 0) {
+                rocket.velocityY += 0.2 * rocket.thrust / 100;
+                rocket.fuel -= 0.1;
+            }
+            if (keys.A && rocket.fuel > 0) {
+                rocket.velocityX -= 0.2 * rocket.thrust / 100;
+                rocket.fuel -= 0.1;
+            }
+            if (keys.D && rocket.fuel > 0) {
+                rocket.velocityX += 0.2 * rocket.thrust / 100;
+                rocket.fuel -= 0.1;
+            }
+
+            // Apply gravity
+            rocket.velocityY += gravity;
+
+            // Move rocket
+            rocket.x += rocket.velocityX;
+            rocket.y += rocket.velocityY;
+
+            // Collision with ground (landing)
+            if (rocket.y + rocket.height >= canvas.height - 10 && Math.abs(rocket.velocityY) < 1) {
+                rocket.velocityY = 0;
+                rocket.velocityX = 0;
+                rocket.y = canvas.height - rocket.height;
+                // Successful landing
+                if (level < 3) {
+                    level++;
+                    resetRocket();
+                }
+            }
+
+            if (rocket.y + rocket.height >= canvas.height) {
+                rocket.velocityY = 0;
+                rocket.velocityX = 0;
+                rocket.y = canvas.height - rocket.height;
+            }
+
+            // Bounds check
+            if (rocket.x <= 0) rocket.x = 0;
+            if (rocket.x + rocket.width >= canvas.width) rocket.x = canvas.width - rocket.width;
+        }
+
+        function resetRocket() {
+            rocket.x = canvas.width / 2;
+            rocket.y = canvas.height / 5;
+            rocket.velocityX = 0;
+            rocket.velocityY = 0;
+            rocket.fuel = 100;
+        }
+
+        function drawRocket() {
+            ctx.save();
+            ctx.translate(rocket.x, rocket.y);
+            ctx.rotate(rocket.angle);
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(-rocket.width / 2, -rocket.height / 2, rocket.width, rocket.height);
+            ctx.restore();
+        }
+
+        function drawGround() {
+            ctx.fillStyle = "#2c3e50";
+            ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
+        }
+
+        function update() {
+            rocket.thrust = throttleInput.value;
+            updateRocket();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGround();
+            drawRocket();
+
+            // Fuel bar
+            ctx.fillStyle = "#ff6347";
+            ctx.fillRect(10, 10, (rocket.fuel / 100) * 200, 20);
+
+            // Level display
+            ctx.fillStyle = "#fff";
+            ctx.font = "30px Arial";
+            ctx.fillText("Уровень: " + level, 10, 50);
+
+            requestAnimationFrame(update);
+        }
+
+        update();
+    </script>
+</body>
+</html>
